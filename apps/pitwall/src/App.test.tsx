@@ -95,6 +95,35 @@ describe("Pitwall App", () => {
     ws.emit("message", { data: JSON.stringify({ type: "room.joined", roomId: "r1", role: "engineer", snapshot: baseSnapshot(160) }) });
     expect(await screen.findByText("BOX THIS LAP")).toBeEnabled();
   });
+
+  it("supports replay list/load and scrub controls", async () => {
+    vi.stubGlobal("WebSocket", MockWebSocket as any);
+    render(<App />);
+    const ws = MockWebSocket.instances.at(-1)!;
+    ws.emit("message", { data: JSON.stringify({ type: "room.joined", roomId: "r1", role: "engineer", snapshot: baseSnapshot(160) }) });
+    fireEvent.click(await screen.findByText("REPLAY VIEW"));
+    ws.emit("message", {
+      data: JSON.stringify({
+        type: "replay.listed",
+        roomId: "r1",
+        sessions: [{ replayId: "rp1", roomId: "r1", driverName: "DRV", startedAt: 1000, endedAt: 2000, eventCount: 2, frameCount: 2 }]
+      })
+    });
+    fireEvent.click(await screen.findByText(/frames 2/));
+    ws.emit("message", {
+      data: JSON.stringify({
+        type: "replay.loaded",
+        roomId: "r1",
+        replayId: "rp1",
+        rawPackets: [],
+        events: [{ type: "telemetry.snapshot.received", ts: 1000, roomId: "r1", sequence: 1 }],
+        timeline: [{ t: 0, snapshot: baseSnapshot(100) }, { t: 500, snapshot: baseSnapshot(200) }]
+      })
+    });
+    expect(await screen.findByText("Playback")).toBeTruthy();
+    fireEvent.change(screen.getByRole("slider"), { target: { value: "500" } });
+    expect(await screen.findByText("200")).toBeTruthy();
+  });
 });
 
 function baseSnapshot(speed: number) {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { DerivedSnapshot, RelayToClientMessage, ReplayEvent, Role } from "@pitwall/shared-types";
+import type { DerivedSnapshot, RelayToClientMessage, ReplayEvent, ReplayFrame, ReplaySession, Role } from "@pitwall/shared-types";
 
 type WsState = "connecting" | "open" | "closed";
 
@@ -21,6 +21,14 @@ export function App() {
   const [accessCode, setAccessCode] = useState("engcode");
   const [role, setRole] = useState<Role>("viewer");
   const [actionLog, setActionLog] = useState<string[]>([]);
+  const [view, setView] = useState<"live" | "replay">("live");
+  const [replaySessions, setReplaySessions] = useState<ReplaySession[]>([]);
+  const [replayTimeline, setReplayTimeline] = useState<ReplayFrame[]>([]);
+  const [replayEvents, setReplayEvents] = useState<ReplayEvent[]>([]);
+  const [playheadMs, setPlayheadMs] = useState(0);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [compareMode, setCompareMode] = useState(false);
 
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:7071");
@@ -41,10 +49,25 @@ export function App() {
       }
       if (msg.type === "snapshot.full" || msg.type === "snapshot.delta") setSnapshot(msg.snapshot);
       if (msg.type === "event.feed") setEvents((prev) => [msg.event, ...prev].slice(0, 120));
+      if (msg.type === "replay.listed") setReplaySessions(msg.sessions);
+      if (msg.type === "replay.loaded") {
+        setReplayTimeline(msg.timeline);
+        setReplayEvents(msg.events);
+        setPlayheadMs(0);
+        setView("replay");
+      }
     });
 
     return () => socket.close();
   }, []);
+
+  useEffect(() => {
+    if (!isPlaying || view !== "replay") return;
+    const id = setInterval(() => {
+      setPlayheadMs((v) => v + 100 * playbackSpeed);
+    }, 100);
+    return () => clearInterval(id);
+  }, [isPlaying, playbackSpeed, view]);
 
   const quality = snapshot?.diagnostics?.diagnosticsQuality ?? "unavailable";
   const canAct = role === "engineer" || role === "admin" || role === "strategist";
@@ -70,6 +93,9 @@ export function App() {
     ws.send(JSON.stringify({ type: "engineer.action", roomId: selectedRoom, action }));
     setActionLog((prev) => [`${new Date().toLocaleTimeString()} ${action}`, ...prev].slice(0, 20));
   };
+  const replayDuration = replayTimeline[replayTimeline.length - 1]?.t ?? 0;
+  const replayFrame = replayTimeline.reduce<ReplayFrame | null>((acc, frame) => (frame.t <= playheadMs ? frame : acc), replayTimeline[0] ?? null);
+  const replaySnapshot = replayFrame?.snapshot ?? null;
 
   return (
     <div className="shell">
@@ -110,7 +136,20 @@ export function App() {
           <Chip label={`ROLE ${role.toUpperCase()}`} tone={canAct ? "success" : "warning"} />
         </section>
 
-        <div className="main-grid">
+        <div className="chips">
+          <button onClick={() => setView("live")} className={view === "live" ? "tab active" : "tab"}>LIVE VIEW</button>
+          <button
+            onClick={() => {
+              if (selectedRoom) ws?.send(JSON.stringify({ type: "replay.list", roomId: selectedRoom }));
+              setView("replay");
+            }}
+            className={view === "replay" ? "tab active" : "tab"}
+          >
+            REPLAY VIEW
+          </button>
+        </div>
+
+        {view === "live" ? <div className="main-grid">
           <section className="left panel">
             <h3>Driver Rail</h3>
             <Metric title="Fuel Margin" value={snapshot?.fuel?.fuelMargin?.value} quality={snapshot?.fuel?.fuelMargin?.quality} unit="laps" />
@@ -170,7 +209,53 @@ export function App() {
               <small>{snapshot?.strategy?.rationale?.join(" | ") ?? "Awaiting telemetry"}</small>
             </div>
           </section>
-        </div>
+        </div> : <section className="panel replay">
+          <div className="replay-grid">
+            <article className="panel">
+              <h3>Replay Browser</h3>
+              <ul className="replay-list">
+                {replaySessions.map((s) => (
+                  <li key={s.replayId}>
+                    <button onClick={() => ws?.send(JSON.stringify({ type: "replay.get", roomId: selectedRoom, replayId: s.replayId }))}>
+                      {s.driverName} · {new Date(s.startedAt).toLocaleTimeString()} · frames {s.frameCount}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </article>
+            <article className="panel">
+              <h3>Playback</h3>
+              <input type="range" min={0} max={Math.max(1, replayDuration)} value={Math.min(playheadMs, replayDuration)} onChange={(e) => setPlayheadMs(Number(e.target.value))} />
+              <div className="chips">
+                <button onClick={() => setIsPlaying((v) => !v)} className="tab">{isPlaying ? "PAUSE" : "PLAY"}</button>
+                <button onClick={() => setPlaybackSpeed(0.5)} className="tab">0.5x</button>
+                <button onClick={() => setPlaybackSpeed(1)} className="tab">1x</button>
+                <button onClick={() => setPlaybackSpeed(2)} className="tab">2x</button>
+                <button onClick={() => setView("live")} className="tab">SYNC TO LIVE</button>
+              </div>
+              <Metric title="Replay Speed" value={playbackSpeed} quality="live" />
+              <Metric title="Playhead" value={playheadMs} quality="live" unit="ms" />
+              <Metric title="Replay Speed(kph)" value={replaySnapshot?.driver.speedKph.value} quality={replaySnapshot?.driver.speedKph.quality} />
+              <Metric title="Replay Delta(s)" value={replaySnapshot?.driver.lapDelta.value} quality={replaySnapshot?.driver.lapDelta.quality} />
+              <div className="chips">
+                <label><input type="checkbox" checked={compareMode} onChange={(e) => setCompareMode(e.target.checked)} /> compare driver</label>
+              </div>
+              {compareMode ? <Metric title="Comparison (placeholder)" valueText="secondary stream pending" quality="estimated" /> : null}
+            </article>
+            <article className="panel">
+              <h3>Jump To Event</h3>
+              <ul className="replay-list">
+                {replayEvents.slice(0, 20).map((event, idx) => (
+                  <li key={`${event.type}-${idx}`}>
+                    <button onClick={() => setPlayheadMs(Math.max(0, event.ts - (replayEvents[0]?.ts ?? event.ts)))}>
+                      {event.type}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </article>
+          </div>
+        </section>}
 
         <section className="bottom panel">
           <div className="tableWrap">

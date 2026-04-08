@@ -12,6 +12,7 @@ import type {
   Room
 } from "@pitwall/shared-types";
 import { buildDerivedSnapshot, buildTelemetryEvent } from "@pitwall/telemetry-engine";
+import { createRecorder, finalizeReplay, recordEvent, recordPacket, recordSnapshot, type ReplayRecorder } from "@pitwall/replay-core";
 
 const port = Number(process.env.RELAY_PORT ?? 7071);
 const httpServer = createServer();
@@ -25,6 +26,8 @@ const rooms = new Map<string, Room>();
 const roomMembers = new Map<string, Set<WebSocket>>();
 const roomSnapshots = new Map<string, DerivedSnapshot>();
 const roomRuntime = new Map<string, RoomRuntime>();
+const roomRecorders = new Map<string, ReplayRecorder>();
+const roomReplayArchive = new Map<string, Array<{ meta: ReturnType<typeof finalizeReplay>; recorder: ReplayRecorder }>>();
 const joinAttempts = new Map<string, { count: number; lockedUntil: number }>();
 
 wss.on("connection", (ws) => {
@@ -68,6 +71,8 @@ function handleMessage(ws: WebSocket, message: ClientToRelayMessage): void {
 
       rooms.set(roomId, room);
       roomRuntime.set(roomId, { events: [], diagnostics: null });
+      roomRecorders.set(roomId, createRecorder(roomId, room.driverName));
+      roomReplayArchive.set(roomId, []);
       sessions.set(ws, { ...session, role: "driver", roomId });
       roomMembers.set(roomId, new Set([ws]));
       send(ws, { type: "room.created", roomId });
@@ -136,6 +141,8 @@ function handleMessage(ws: WebSocket, message: ClientToRelayMessage): void {
         relayConnected: true
       });
       roomSnapshots.set(room.roomId, snapshot);
+      const recorder = roomRecorders.get(room.roomId) ?? createRecorder(room.roomId, room.driverName);
+      roomRecorders.set(room.roomId, recordSnapshot(recordPacket(recorder, message.packet), snapshot));
 
       if (!roomRuntime.has(room.roomId)) roomRuntime.set(room.roomId, { events: [], diagnostics: null });
       roomRuntime.get(room.roomId)!.diagnostics = snapshot.diagnostics;
@@ -166,6 +173,16 @@ function handleMessage(ws: WebSocket, message: ClientToRelayMessage): void {
           warning: "Telemetry stale"
         });
       }
+      if (snapshot.sequence > 0 && snapshot.sequence % 400 === 0) {
+        const current = roomRecorders.get(room.roomId);
+        if (current) {
+          const meta = finalizeReplay(current);
+          const archive = roomReplayArchive.get(room.roomId) ?? [];
+          archive.unshift({ meta, recorder: current });
+          roomReplayArchive.set(room.roomId, archive.slice(0, 10));
+          roomRecorders.set(room.roomId, createRecorder(room.roomId, room.driverName));
+        }
+      }
       return;
     }
 
@@ -183,6 +200,28 @@ function handleMessage(ws: WebSocket, message: ClientToRelayMessage): void {
       });
       return;
     }
+    case "replay.list": {
+      const archive = roomReplayArchive.get(message.roomId) ?? [];
+      send(ws, { type: "replay.listed", roomId: message.roomId, sessions: archive.map((a) => a.meta) });
+      return;
+    }
+    case "replay.get": {
+      const archive = roomReplayArchive.get(message.roomId) ?? [];
+      const found = archive.find((a) => a.meta.replayId === message.replayId);
+      if (!found) {
+        send(ws, { type: "error", code: "replay_not_found", message: "Replay not found" });
+        return;
+      }
+      send(ws, {
+        type: "replay.loaded",
+        roomId: message.roomId,
+        replayId: message.replayId,
+        rawPackets: found.recorder.rawPackets,
+        events: found.recorder.events,
+        timeline: found.recorder.timeline
+      });
+      return;
+    }
 
     case "heartbeat":
       return;
@@ -192,6 +231,8 @@ function handleMessage(ws: WebSocket, message: ClientToRelayMessage): void {
 }
 
 function broadcastEvent(roomId: string, event: ReplayEvent): void {
+  const rec = roomRecorders.get(roomId);
+  if (rec) recordEvent(rec, event);
   const runtime = roomRuntime.get(roomId);
   if (runtime) runtime.events = [event, ...runtime.events].slice(0, 100);
   const members = roomMembers.get(roomId);

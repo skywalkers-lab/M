@@ -9,6 +9,10 @@
 - relay event feed (`event.feed`) + diagnostics on join
 - role-aware action bar (viewer read-only, engineer/strategist/admin action enabled)
 
+## Phase 3 (in progress)
+- replay 3-layer recording: raw packet log + normalized event log + derived snapshot timeline
+- replay browser/list/load + scrubber + playback speed + jump-to-event + sync-to-live
+
 ## Run
 ```bash
 pnpm install

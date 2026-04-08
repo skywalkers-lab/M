@@ -143,6 +143,23 @@ export const ReplayEventSchema = z.discriminatedUnion("type", [
 ]);
 export type ReplayEvent = z.infer<typeof ReplayEventSchema>;
 
+export const ReplayFrameSchema = z.object({
+  t: z.number().int().nonnegative(),
+  snapshot: z.any()
+});
+export type ReplayFrame = { t: number; snapshot: DerivedSnapshot };
+
+export const ReplaySessionSchema = z.object({
+  replayId: z.string(),
+  roomId: z.string(),
+  driverName: z.string(),
+  startedAt: z.number().int().nonnegative(),
+  endedAt: z.number().int().nonnegative(),
+  eventCount: z.number().int().nonnegative(),
+  frameCount: z.number().int().nonnegative()
+});
+export type ReplaySession = z.infer<typeof ReplaySessionSchema>;
+
 export const ClassificationEntrySchema = z.object({
   pos: z.number(),
   driver: z.string(),
@@ -189,6 +206,8 @@ export type ClientToRelayMessage =
   | { type: "room.join"; roomId: string; password: string; accessCode?: string }
   | { type: "telemetry.raw"; roomId: string; packet: TelemetryPacket }
   | { type: "engineer.action"; roomId: string; action: "BOX_THIS_LAP" | "PUSH_NOW" | "HARVEST_MODE" | "HOLD_POS" }
+  | { type: "replay.list"; roomId: string }
+  | { type: "replay.get"; roomId: string; replayId: string }
   | { type: "heartbeat" };
 
 export type RelayToClientMessage =
@@ -198,6 +217,8 @@ export type RelayToClientMessage =
   | { type: "snapshot.full"; roomId: string; snapshot: DerivedSnapshot }
   | { type: "snapshot.delta"; roomId: string; snapshot: DerivedSnapshot }
   | { type: "event.feed"; roomId: string; event: ReplayEvent }
+  | { type: "replay.listed"; roomId: string; sessions: ReplaySession[] }
+  | { type: "replay.loaded"; roomId: string; replayId: string; rawPackets: TelemetryPacket[]; events: ReplayEvent[]; timeline: ReplayFrame[] }
   | { type: "error"; code: string; message: string };
 
 export function metric(value: number | null, quality: DataQuality, note?: string): MetricValue {
