@@ -222,6 +222,8 @@ export function App() {
             <div className="strategyBox">
               <strong>{snapshot?.strategy?.headline ?? "No recommendation"}</strong>
               <small>{`source=${snapshot?.strategy?.source ?? "--"} conf=${snapshot?.strategy?.confidence ?? "--"}`}</small>
+              <small>{`downside=${snapshot?.strategy?.downsideRisk ?? "--"} stability=${snapshot?.strategy?.stabilityScore ?? "--"}`}</small>
+              <small>{`safe=${snapshot?.strategy?.alternatives?.safe?.code ?? "--"} gamble=${snapshot?.strategy?.alternatives?.gamble?.code ?? "--"}`}</small>
               <small>{snapshot?.strategy?.rationale?.join(" | ") ?? "Awaiting telemetry"}</small>
             </div>
           </section>

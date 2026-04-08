@@ -35,6 +35,8 @@ describe("buildDerivedSnapshot", () => {
     expect(snapshot.fuel.fuelMargin.value).not.toBeNull();
     expect(snapshot.tyre.avgTemp.quality).toBe("estimated");
     expect(snapshot.diagnostics.diagnosticsQuality).toBe("live");
+    expect(snapshot.strategy.source).toBe("monte_carlo");
+    expect(snapshot.strategy.alternatives.safe.code).toBeTruthy();
   });
 
   it("marks stale and estimated correctly when partial", () => {

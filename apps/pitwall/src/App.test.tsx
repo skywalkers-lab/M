@@ -55,6 +55,8 @@ describe("Pitwall App", () => {
     });
 
     expect(await screen.findByText("120")).toBeTruthy();
+    expect(await screen.findByText(/source=monte_carlo/)).toBeTruthy();
+    expect(await screen.findByText(/safe=SAFE_POINTS_MODE/)).toBeTruthy();
 
     ws.emit("message", { data: JSON.stringify({ type: "snapshot.delta", roomId: "r1", snapshot: baseSnapshot(180) }) });
     expect(await screen.findByText("180")).toBeTruthy();
@@ -192,8 +194,21 @@ function baseSnapshot(speed: number) {
       confidence: 0.6,
       rationale: ["ok"],
       riskLevel: "low",
-      source: "heuristic",
-      stale: false
+      source: "monte_carlo",
+      stale: false,
+      alternatives: {
+        safe: { code: "SAFE_POINTS_MODE", headline: "safe", expectedGainSec: 0.1 },
+        gamble: { code: "HIGH_VARIANCE_GAMBLE", headline: "gamble", expectedGainSec: 0.7 }
+      },
+      downsideRisk: 1.2,
+      cvarLoss: 1.6,
+      stabilityScore: 0.7,
+      uncertaintyDrivers: ["SC hazard variance"],
+      trafficTrapRisk: 0.4,
+      scBenefitIfExtend: 0.8,
+      rejoinQuality: "medium",
+      modelConfidence: 0.8,
+      dataFreshnessConfidence: 0.9
     },
     classification: [{ pos: 8, driver: "DRV", gap: "1.30s", interval: "1.10s", threat: "MED", currentStint: "M 8L", tyre: "M", pitCount: 1 }],
     raceControlLog: [],

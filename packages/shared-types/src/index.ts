@@ -129,7 +129,20 @@ export const StrategyRecommendationSchema = z.object({
   rationale: z.array(z.string()),
   riskLevel: z.enum(["low", "medium", "high"]),
   source: z.enum(["heuristic", "monte_carlo"]),
-  stale: z.boolean()
+  stale: z.boolean(),
+  alternatives: z.object({
+    safe: z.object({ code: z.string(), headline: z.string(), expectedGainSec: z.number().nullable() }),
+    gamble: z.object({ code: z.string(), headline: z.string(), expectedGainSec: z.number().nullable() })
+  }),
+  downsideRisk: z.number().nonnegative(),
+  cvarLoss: z.number().nonnegative(),
+  stabilityScore: z.number().min(0).max(1),
+  uncertaintyDrivers: z.array(z.string()),
+  trafficTrapRisk: z.number().min(0).max(1),
+  scBenefitIfExtend: z.number(),
+  rejoinQuality: z.enum(["poor", "medium", "strong"]),
+  modelConfidence: z.number().min(0).max(1),
+  dataFreshnessConfidence: z.number().min(0).max(1)
 });
 export type StrategyRecommendation = z.infer<typeof StrategyRecommendationSchema>;
 
