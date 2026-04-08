@@ -1,0 +1,93 @@
+:root {
+  color-scheme: dark;
+  font-family: "Inter", "Roboto Condensed", system-ui, sans-serif;
+  --bg: #080c12;
+  --panel: #101722;
+  --line: #22344d;
+  --text: #dbe9ff;
+  --accent: #00d1ff;
+  --ok: #19d47b;
+  --warn: #ffb020;
+  --danger: #ff4d4f;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); }
+
+.shell { min-height: 100vh; display: grid; grid-template-columns: 70px 1fr; }
+.sidenav {
+  border-right: 1px solid var(--line);
+  padding: 14px 10px;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+  text-align: center;
+  letter-spacing: 0.12em;
+  font-size: 11px;
+}
+
+.content { padding: 10px; display: grid; gap: 10px; }
+.panel { background: var(--panel); border: 1px solid var(--line); padding: 10px; border-radius: 6px; }
+.topbar { display: flex; justify-content: space-between; align-items: center; }
+.topbar strong { display: block; font-size: 18px; }
+.topbar span { font-size: 12px; color: #9eb2d0; }
+
+.join { display: grid; grid-template-columns: 1.2fr 1fr 1fr 120px 160px; gap: 8px; align-items: center; }
+.join input,.join select,.join button { background: #0d141f; color: var(--text); border: 1px solid #2b3f5b; padding: 8px; }
+.join button { font-weight: 700; }
+
+.main-grid { display: grid; grid-template-columns: 320px 1fr 320px; gap: 10px; }
+.left,.center,.right { min-height: 390px; }
+h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: .08em; color:#98b1d6; }
+
+.metric { border: 1px solid #1f3149; padding: 8px; margin-bottom: 6px; background:#0b1119; }
+.metric span { display:block; font-size:11px; color:#9eb2d0; }
+.metric strong { font-size: 19px; display: flex; align-items: baseline; gap:6px; }
+.metric em { font-size: 11px; color: #90a8c8; font-style: normal; }
+.metric small { color: var(--accent); text-transform: uppercase; font-size: 10px; }
+.metric.compact strong { font-size: 15px; }
+.quad { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+
+.track { width: 100%; height: 220px; background:#0b1119; border:1px solid #1f3149; }
+.trackline { fill: none; stroke: #2e496d; stroke-width: 10; }
+.track text { fill: #c6daff; font-size: 9px; }
+.player { fill: var(--accent); }
+.rival { fill: var(--warn); }
+.rejoin { fill: var(--ok); }
+
+.row2 { display:grid; grid-template-columns: repeat(3,1fr); gap:6px; margin-top:8px; }
+.strategyBox { border:1px solid #325071; background:#0b141f; padding:8px; }
+.strategyBox strong { color: var(--accent); display:block; margin-bottom:4px; }
+.strategyBox small { color:#b9cae5; font-size:11px; }
+
+.bottom { display:grid; gap:8px; }
+.tableWrap table { width:100%; border-collapse: collapse; font-size:12px; }
+.tableWrap th,.tableWrap td { border:1px solid #1e3048; padding:6px; }
+.tableWrap th { color:#9ab4da; text-align:left; }
+
+.logs { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.logPanel { border:1px solid #1f3149; background:#0b1119; padding:8px; min-height:120px; }
+.logPanel h4 { margin:0 0 6px; font-size:12px; }
+.logPanel ul { margin:0; padding-left:16px; font-size:11px; max-height:120px; overflow:auto; }
+
+.actions { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.actions button { background:#111f30; border:1px solid #34547a; color:var(--text); font-weight:700; padding:9px; }
+.actions button:disabled { opacity: .45; cursor:not-allowed; }
+
+.diag { display:flex; flex-wrap:wrap; gap:6px; }
+.chips { display:flex; gap:6px; flex-wrap:wrap; }
+.chip { font-size:11px; border:1px solid currentColor; padding:3px 6px; }
+.chip.info { color:#8fbcff; }
+.chip.success { color:var(--ok); }
+.chip.warning { color:var(--warn); }
+.chip.danger { color:var(--danger); }
+
+.tab { background:#0d1724; color:var(--text); border:1px solid #2c4668; padding:6px 10px; cursor:pointer; }
+.tab.active { border-color: var(--accent); color: var(--accent); }
+.replay-grid { display:grid; grid-template-columns: 1fr 1.4fr 1fr; gap:8px; }
+.replay-list { margin:0; padding-left:16px; max-height:280px; overflow:auto; }
+.replay-list button { width:100%; text-align:left; background:#0c1420; color:#d8e9ff; border:1px solid #2a3f5d; padding:6px; margin:2px 0; }
+.sector { opacity: 0.2; }
+.sector.s1 { fill: #25507a; }
+.sector.s2 { fill: #2f6f43; }
+.sector.s3 { fill: #7a4f20; }
