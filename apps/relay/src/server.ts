@@ -1,4 +1,6 @@
 import { createServer } from "node:http";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { compareSync, hashSync } from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
 import { WebSocketServer, type WebSocket } from "ws";
@@ -29,6 +31,8 @@ const roomRuntime = new Map<string, RoomRuntime>();
 const roomRecorders = new Map<string, ReplayRecorder>();
 const roomReplayArchive = new Map<string, Array<{ meta: ReturnType<typeof finalizeReplay>; recorder: ReplayRecorder }>>();
 const joinAttempts = new Map<string, { count: number; lockedUntil: number }>();
+const replayDir = path.join(process.cwd(), ".pitwall-replays");
+if (!existsSync(replayDir)) mkdirSync(replayDir, { recursive: true });
 
 wss.on("connection", (ws) => {
   sessions.set(ws, { socketId: uuidv4(), role: "viewer" });
@@ -72,7 +76,7 @@ function handleMessage(ws: WebSocket, message: ClientToRelayMessage): void {
       rooms.set(roomId, room);
       roomRuntime.set(roomId, { events: [], diagnostics: null });
       roomRecorders.set(roomId, createRecorder(roomId, room.driverName));
-      roomReplayArchive.set(roomId, []);
+      roomReplayArchive.set(roomId, loadReplayArchive(roomId));
       sessions.set(ws, { ...session, role: "driver", roomId });
       roomMembers.set(roomId, new Set([ws]));
       send(ws, { type: "room.created", roomId });
@@ -180,6 +184,7 @@ function handleMessage(ws: WebSocket, message: ClientToRelayMessage): void {
           const archive = roomReplayArchive.get(room.roomId) ?? [];
           archive.unshift({ meta, recorder: current });
           roomReplayArchive.set(room.roomId, archive.slice(0, 10));
+          persistReplayArchive(room.roomId);
           roomRecorders.set(room.roomId, createRecorder(room.roomId, room.driverName));
         }
       }
@@ -216,6 +221,7 @@ function handleMessage(ws: WebSocket, message: ClientToRelayMessage): void {
         type: "replay.loaded",
         roomId: message.roomId,
         replayId: message.replayId,
+        startedAt: found.meta.startedAt,
         rawPackets: found.recorder.rawPackets,
         events: found.recorder.events,
         timeline: found.recorder.timeline
@@ -244,6 +250,23 @@ function broadcastEvent(roomId: string, event: ReplayEvent): void {
 
 function send(ws: WebSocket, message: RelayToClientMessage): void {
   ws.send(JSON.stringify(message));
+}
+
+function persistReplayArchive(roomId: string): void {
+  const archive = roomReplayArchive.get(roomId) ?? [];
+  const filepath = path.join(replayDir, `${roomId}.json`);
+  writeFileSync(filepath, JSON.stringify(archive), "utf-8");
+}
+
+function loadReplayArchive(roomId: string): Array<{ meta: ReturnType<typeof finalizeReplay>; recorder: ReplayRecorder }> {
+  const filepath = path.join(replayDir, `${roomId}.json`);
+  if (!existsSync(filepath)) return [];
+  try {
+    const raw = readFileSync(filepath, "utf-8");
+    return JSON.parse(raw) as Array<{ meta: ReturnType<typeof finalizeReplay>; recorder: ReplayRecorder }>;
+  } catch {
+    return [];
+  }
 }
 
 function trackFailedAttempt(ws: WebSocket): void {

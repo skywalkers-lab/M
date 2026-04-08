@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createRecorder, finalizeReplay, getFrameAt, recordEvent, recordPacket, recordSnapshot } from "./index";
+import { buildFrameIndex, createRecorder, eventToPlayhead, finalizeReplay, getFrameAt, getFrameAtIndexed, recordEvent, recordPacket, recordSnapshot } from "./index";
 
 describe("replay-core", () => {
   it("records 3-layer replay data", () => {
@@ -30,5 +30,8 @@ describe("replay-core", () => {
     expect(meta.eventCount).toBe(1);
     expect(r.rawPackets).toHaveLength(1);
     expect(getFrameAt(r.timeline, 0)?.t).toBe(0);
+    const idx = buildFrameIndex(r.timeline, 100);
+    expect(getFrameAtIndexed(r.timeline, idx, 0, 100)?.t).toBe(0);
+    expect(eventToPlayhead(1400, 1000)).toBe(400);
   });
 });

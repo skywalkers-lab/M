@@ -218,7 +218,7 @@ export type RelayToClientMessage =
   | { type: "snapshot.delta"; roomId: string; snapshot: DerivedSnapshot }
   | { type: "event.feed"; roomId: string; event: ReplayEvent }
   | { type: "replay.listed"; roomId: string; sessions: ReplaySession[] }
-  | { type: "replay.loaded"; roomId: string; replayId: string; rawPackets: TelemetryPacket[]; events: ReplayEvent[]; timeline: ReplayFrame[] }
+  | { type: "replay.loaded"; roomId: string; replayId: string; startedAt: number; rawPackets: TelemetryPacket[]; events: ReplayEvent[]; timeline: ReplayFrame[] }
   | { type: "error"; code: string; message: string };
 
 export function metric(value: number | null, quality: DataQuality, note?: string): MetricValue {

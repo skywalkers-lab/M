@@ -59,3 +59,24 @@ export function getFrameAt(timeline: ReplayFrame[], t: number): ReplayFrame | nu
   }
   return timeline[idx] ?? null;
 }
+
+export function buildFrameIndex(timeline: ReplayFrame[], bucketMs = 250): Map<number, number> {
+  const index = new Map<number, number>();
+  for (let i = 0; i < timeline.length; i += 1) {
+    const bucket = Math.floor(timeline[i].t / bucketMs);
+    if (!index.has(bucket)) index.set(bucket, i);
+  }
+  return index;
+}
+
+export function getFrameAtIndexed(timeline: ReplayFrame[], index: Map<number, number>, t: number, bucketMs = 250): ReplayFrame | null {
+  if (timeline.length === 0) return null;
+  const bucket = Math.floor(t / bucketMs);
+  let i = index.get(bucket) ?? 0;
+  while (i + 1 < timeline.length && timeline[i + 1].t <= t) i += 1;
+  return timeline[i] ?? null;
+}
+
+export function eventToPlayhead(eventTs: number, replayStartedAt: number): number {
+  return Math.max(0, eventTs - replayStartedAt);
+}

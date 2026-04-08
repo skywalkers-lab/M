@@ -115,6 +115,7 @@ describe("Pitwall App", () => {
         type: "replay.loaded",
         roomId: "r1",
         replayId: "rp1",
+        startedAt: 1000,
         rawPackets: [],
         events: [{ type: "telemetry.snapshot.received", ts: 1000, roomId: "r1", sequence: 1 }],
         timeline: [{ t: 0, snapshot: baseSnapshot(100) }, { t: 500, snapshot: baseSnapshot(200) }]

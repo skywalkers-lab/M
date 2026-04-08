@@ -12,6 +12,7 @@
 ## Phase 3 (in progress)
 - replay 3-layer recording: raw packet log + normalized event log + derived snapshot timeline
 - replay browser/list/load + scrubber + playback speed + jump-to-event + sync-to-live
+- replay archive persistence(.pitwall-replays), frame indexing, dual-stream comparison placeholder, ghost marker/sector overlay
 
 ## Run
 ```bash

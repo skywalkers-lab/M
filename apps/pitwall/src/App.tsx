@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { DerivedSnapshot, RelayToClientMessage, ReplayEvent, ReplayFrame, ReplaySession, Role } from "@pitwall/shared-types";
+import { buildFrameIndex, eventToPlayhead, getFrameAtIndexed } from "@pitwall/replay-core";
 
 type WsState = "connecting" | "open" | "closed";
 
@@ -25,6 +26,9 @@ export function App() {
   const [replaySessions, setReplaySessions] = useState<ReplaySession[]>([]);
   const [replayTimeline, setReplayTimeline] = useState<ReplayFrame[]>([]);
   const [replayEvents, setReplayEvents] = useState<ReplayEvent[]>([]);
+  const [replayStartedAt, setReplayStartedAt] = useState(0);
+  const [compareReplayId, setCompareReplayId] = useState<string>("");
+  const [compareTimeline, setCompareTimeline] = useState<ReplayFrame[]>([]);
   const [playheadMs, setPlayheadMs] = useState(0);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -51,10 +55,15 @@ export function App() {
       if (msg.type === "event.feed") setEvents((prev) => [msg.event, ...prev].slice(0, 120));
       if (msg.type === "replay.listed") setReplaySessions(msg.sessions);
       if (msg.type === "replay.loaded") {
-        setReplayTimeline(msg.timeline);
-        setReplayEvents(msg.events);
-        setPlayheadMs(0);
-        setView("replay");
+        if (compareMode && compareReplayId === msg.replayId) {
+          setCompareTimeline(msg.timeline);
+        } else {
+          setReplayTimeline(msg.timeline);
+          setReplayEvents(msg.events);
+          setReplayStartedAt(msg.startedAt);
+          setPlayheadMs(0);
+          setView("replay");
+        }
       }
     });
 
@@ -94,8 +103,12 @@ export function App() {
     setActionLog((prev) => [`${new Date().toLocaleTimeString()} ${action}`, ...prev].slice(0, 20));
   };
   const replayDuration = replayTimeline[replayTimeline.length - 1]?.t ?? 0;
-  const replayFrame = replayTimeline.reduce<ReplayFrame | null>((acc, frame) => (frame.t <= playheadMs ? frame : acc), replayTimeline[0] ?? null);
+  const replayIndex = useMemo(() => buildFrameIndex(replayTimeline, 200), [replayTimeline]);
+  const replayFrame = getFrameAtIndexed(replayTimeline, replayIndex, playheadMs, 200);
   const replaySnapshot = replayFrame?.snapshot ?? null;
+  const compareIndex = useMemo(() => buildFrameIndex(compareTimeline, 200), [compareTimeline]);
+  const compareFrame = getFrameAtIndexed(compareTimeline, compareIndex, playheadMs, 200);
+  const compareSnapshot = compareFrame?.snapshot ?? null;
 
   return (
     <div className="shell">
@@ -239,15 +252,39 @@ export function App() {
               <Metric title="Replay Delta(s)" value={replaySnapshot?.driver.lapDelta.value} quality={replaySnapshot?.driver.lapDelta.quality} />
               <div className="chips">
                 <label><input type="checkbox" checked={compareMode} onChange={(e) => setCompareMode(e.target.checked)} /> compare driver</label>
+                {compareMode ? (
+                  <select
+                    value={compareReplayId}
+                    onChange={(e) => {
+                      setCompareReplayId(e.target.value);
+                      ws?.send(JSON.stringify({ type: "replay.get", roomId: selectedRoom, replayId: e.target.value }));
+                    }}
+                  >
+                    <option value="">select compare replay</option>
+                    {replaySessions.map((s) => (
+                      <option key={s.replayId} value={s.replayId}>
+                        {s.driverName} / {s.replayId.slice(-6)}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
               </div>
-              {compareMode ? <Metric title="Comparison (placeholder)" valueText="secondary stream pending" quality="estimated" /> : null}
+              {compareMode ? <Metric title="Speed Δ (P-C)" value={(replaySnapshot?.driver.speedKph.value ?? 0) - (compareSnapshot?.driver.speedKph.value ?? 0)} quality="estimated" /> : null}
+              <svg viewBox="0 0 320 120" className="track">
+                <rect x="0" y="0" width="106" height="120" className="sector s1" />
+                <rect x="106" y="0" width="106" height="120" className="sector s2" />
+                <rect x="212" y="0" width="108" height="120" className="sector s3" />
+                <path d="M20 60 C 70 10, 240 10, 300 60 C 240 110, 70 110, 20 60" className="trackline" />
+                <circle cx={40 + ((replaySnapshot?.driver.speedKph.value ?? 0) / 360) * 240} cy="60" r="5" className="player" />
+                {compareMode ? <circle cx={40 + ((compareSnapshot?.driver.speedKph.value ?? 0) / 360) * 240} cy="76" r="4" className="rejoin" /> : null}
+              </svg>
             </article>
             <article className="panel">
               <h3>Jump To Event</h3>
               <ul className="replay-list">
                 {replayEvents.slice(0, 20).map((event, idx) => (
                   <li key={`${event.type}-${idx}`}>
-                    <button onClick={() => setPlayheadMs(Math.max(0, event.ts - (replayEvents[0]?.ts ?? event.ts)))}>
+                    <button onClick={() => setPlayheadMs(eventToPlayhead(event.ts, replayStartedAt || event.ts))}>
                       {event.type}
                     </button>
                   </li>

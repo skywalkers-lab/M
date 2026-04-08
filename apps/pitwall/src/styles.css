@@ -87,3 +87,7 @@ h3 { margin: 0 0 8px; font-size: 13px; letter-spacing: .08em; color:#98b1d6; }
 .replay-grid { display:grid; grid-template-columns: 1fr 1.4fr 1fr; gap:8px; }
 .replay-list { margin:0; padding-left:16px; max-height:280px; overflow:auto; }
 .replay-list button { width:100%; text-align:left; background:#0c1420; color:#d8e9ff; border:1px solid #2a3f5d; padding:6px; margin:2px 0; }
+.sector { opacity: 0.2; }
+.sector.s1 { fill: #25507a; }
+.sector.s2 { fill: #2f6f43; }
+.sector.s3 { fill: #7a4f20; }
