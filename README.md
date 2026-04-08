@@ -15,6 +15,10 @@
 - replay archive persistence(.pitwall-replays), frame indexing, dual-stream comparison placeholder, ghost marker/sector overlay
 - sync-to-live 전환 일관성, event jump edge-case clamp, overlay marker clamp 보강
 
+## Phase 4 (started)
+- Monte Carlo strategy engine v1 (`packages/strategy-engine`) + telemetry-engine 연동
+- 전략 후보 생성, 확률 샘플링, recommendation contract 출력(source=monte_carlo)
+
 ## Run
 ```bash
 pnpm install

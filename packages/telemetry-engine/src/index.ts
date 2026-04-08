@@ -1,4 +1,5 @@
 import { metric, type DataQuality, type DerivedSnapshot, type ReplayEvent, type TelemetryPacket } from "@pitwall/shared-types";
+import { recommendStrategy } from "@pitwall/strategy-engine";
 
 export type DeriveArgs = {
   roomId: string;
@@ -46,6 +47,18 @@ export function buildDerivedSnapshot(args: DeriveArgs): DerivedSnapshot {
   const qualityBase: DataQuality = partialTelemetry ? "estimated" : "live";
   const quality = stale ? "stale" : qualityBase;
   const unavailable: DataQuality = stale ? "stale" : "unavailable";
+
+  const strategy = recommendStrategy({
+    lapNumber: numberOrNull(p.lapNumber) ?? 1,
+    lapsRemaining: Math.max(1, 58 - (numberOrNull(p.lapNumber) ?? 1)),
+    tyreWearPct: tyreWear ?? 30,
+    tyreDegSlope: wearDelta ?? 0.6,
+    fuelMarginLaps: fuelMargin ?? 0,
+    gapAhead: gapAhead ?? 1.5,
+    gapBehind: gapBehind ?? 1.5,
+    ersBatteryPct: ersBattery ?? 50,
+    stale
+  });
 
   return {
     roomId,
@@ -128,19 +141,7 @@ export function buildDerivedSnapshot(args: DeriveArgs): DerivedSnapshot {
       partialTelemetry,
       diagnosticsQuality: stale ? "stale" : partialTelemetry ? "estimated" : "live"
     },
-    strategy: {
-      recommendationCode: undercutRisk === "high" ? "BOX_THIS_LAP" : "HOLD_POS",
-      headline: undercutRisk === "high" ? "Cover undercut risk" : "Hold and monitor tyre delta",
-      expectedGainSec: undercutRisk === "high" ? 1.8 : 0.4,
-      confidence: stale ? 0.34 : 0.62,
-      rationale: [
-        `Threat ${threatLevel}, gapBehind ${formatNum(gapBehind)}s`,
-        `Tyre wear ${formatNum(tyreWear)}% / fuel margin ${formatNum(fuelMargin)} laps`
-      ],
-      riskLevel: undercutRisk,
-      source: "heuristic",
-      stale
-    },
+    strategy,
     classification: buildClassification(driverName, currentPosition, gapAhead, gapBehind),
     raceControlLog: stale ? ["Telemetry stale (>3s)"] : ["Green flag", "Pit window heuristic active"],
     strategyLog: ["Heuristic strategy refreshed", `Clean air window: ${cleanAirWindow}`],

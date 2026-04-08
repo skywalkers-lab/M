@@ -221,6 +221,7 @@ export function App() {
             <Metric title="Crossover" valueText={snapshot ? `L${Math.round((snapshot.position.pitWindowOpenLap.value ?? 0) + 2)}` : "--"} quality="estimated" />
             <div className="strategyBox">
               <strong>{snapshot?.strategy?.headline ?? "No recommendation"}</strong>
+              <small>{`source=${snapshot?.strategy?.source ?? "--"} conf=${snapshot?.strategy?.confidence ?? "--"}`}</small>
               <small>{snapshot?.strategy?.rationale?.join(" | ") ?? "Awaiting telemetry"}</small>
             </div>
           </section>
