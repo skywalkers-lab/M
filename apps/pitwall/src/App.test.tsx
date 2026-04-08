@@ -117,13 +117,16 @@ describe("Pitwall App", () => {
         replayId: "rp1",
         startedAt: 1000,
         rawPackets: [],
-        events: [{ type: "telemetry.snapshot.received", ts: 1000, roomId: "r1", sequence: 1 }],
+        events: [{ type: "telemetry.snapshot.received", ts: 2000, roomId: "r1", sequence: 1 }],
         timeline: [{ t: 0, snapshot: baseSnapshot(100) }, { t: 500, snapshot: baseSnapshot(200) }]
       })
     });
     expect(await screen.findByText("Playback")).toBeTruthy();
     fireEvent.change(screen.getByRole("slider"), { target: { value: "500" } });
     expect(await screen.findByText("200")).toBeTruthy();
+    fireEvent.click(screen.getByText("telemetry.snapshot.received"));
+    fireEvent.click(screen.getByText("SYNC TO LIVE"));
+    expect(screen.queryByText("Playback")).toBeNull();
   });
 });
 

@@ -29,6 +29,7 @@ export function App() {
   const [replayStartedAt, setReplayStartedAt] = useState(0);
   const [compareReplayId, setCompareReplayId] = useState<string>("");
   const [compareTimeline, setCompareTimeline] = useState<ReplayFrame[]>([]);
+  const [compareChannel, setCompareChannel] = useState<"speed" | "throttle" | "brake" | "delta">("speed");
   const [playheadMs, setPlayheadMs] = useState(0);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -109,6 +110,7 @@ export function App() {
   const compareIndex = useMemo(() => buildFrameIndex(compareTimeline, 200), [compareTimeline]);
   const compareFrame = getFrameAtIndexed(compareTimeline, compareIndex, playheadMs, 200);
   const compareSnapshot = compareFrame?.snapshot ?? null;
+  const compareDelta = calcCompareDelta(compareChannel, replaySnapshot, compareSnapshot);
 
   return (
     <div className="shell">
@@ -244,7 +246,16 @@ export function App() {
                 <button onClick={() => setPlaybackSpeed(0.5)} className="tab">0.5x</button>
                 <button onClick={() => setPlaybackSpeed(1)} className="tab">1x</button>
                 <button onClick={() => setPlaybackSpeed(2)} className="tab">2x</button>
-                <button onClick={() => setView("live")} className="tab">SYNC TO LIVE</button>
+                <button
+                  onClick={() => {
+                    setIsPlaying(false);
+                    setView("live");
+                    setPlayheadMs(0);
+                  }}
+                  className="tab"
+                >
+                  SYNC TO LIVE
+                </button>
               </div>
               <Metric title="Replay Speed" value={playbackSpeed} quality="live" />
               <Metric title="Playhead" value={playheadMs} quality="live" unit="ms" />
@@ -268,15 +279,23 @@ export function App() {
                     ))}
                   </select>
                 ) : null}
+                {compareMode ? (
+                  <select value={compareChannel} onChange={(e) => setCompareChannel(e.target.value as typeof compareChannel)}>
+                    <option value="speed">speed</option>
+                    <option value="throttle">throttle</option>
+                    <option value="brake">brake</option>
+                    <option value="delta">lap delta</option>
+                  </select>
+                ) : null}
               </div>
-              {compareMode ? <Metric title="Speed Δ (P-C)" value={(replaySnapshot?.driver.speedKph.value ?? 0) - (compareSnapshot?.driver.speedKph.value ?? 0)} quality="estimated" /> : null}
+              {compareMode ? <Metric title={`${compareChannel} Δ (P-C)`} value={compareDelta} quality="estimated" /> : null}
               <svg viewBox="0 0 320 120" className="track">
                 <rect x="0" y="0" width="106" height="120" className="sector s1" />
                 <rect x="106" y="0" width="106" height="120" className="sector s2" />
                 <rect x="212" y="0" width="108" height="120" className="sector s3" />
                 <path d="M20 60 C 70 10, 240 10, 300 60 C 240 110, 70 110, 20 60" className="trackline" />
-                <circle cx={40 + ((replaySnapshot?.driver.speedKph.value ?? 0) / 360) * 240} cy="60" r="5" className="player" />
-                {compareMode ? <circle cx={40 + ((compareSnapshot?.driver.speedKph.value ?? 0) / 360) * 240} cy="76" r="4" className="rejoin" /> : null}
+                <circle cx={markerX(replaySnapshot?.driver.speedKph.value ?? 0)} cy="60" r="5" className="player" />
+                {compareMode ? <circle cx={markerX(compareSnapshot?.driver.speedKph.value ?? 0)} cy="76" r="4" className="rejoin" /> : null}
               </svg>
             </article>
             <article className="panel">
@@ -284,7 +303,7 @@ export function App() {
               <ul className="replay-list">
                 {replayEvents.slice(0, 20).map((event, idx) => (
                   <li key={`${event.type}-${idx}`}>
-                    <button onClick={() => setPlayheadMs(eventToPlayhead(event.ts, replayStartedAt || event.ts))}>
+                    <button onClick={() => setPlayheadMs(Math.min(replayDuration, eventToPlayhead(event.ts, replayStartedAt || event.ts)))}>
                       {event.type}
                     </button>
                   </li>
@@ -374,4 +393,32 @@ function qualityTone(quality: string): "info" | "success" | "warning" | "danger"
 function fmt(v: number | null | undefined): string {
   if (v === null || v === undefined) return "--";
   return Number.isInteger(v) ? String(v) : v.toFixed(2);
+}
+
+function markerX(speed: number): number {
+  return Math.max(40, Math.min(280, 40 + (speed / 360) * 240));
+}
+
+function calcCompareDelta(
+  channel: "speed" | "throttle" | "brake" | "delta",
+  primary: DerivedSnapshot | null,
+  secondary: DerivedSnapshot | null
+): number {
+  const p =
+    channel === "speed"
+      ? primary?.driver.speedKph.value ?? 0
+      : channel === "throttle"
+      ? primary?.driver.throttlePct.value ?? 0
+      : channel === "brake"
+      ? primary?.driver.brakePct.value ?? 0
+      : primary?.driver.lapDelta.value ?? 0;
+  const s =
+    channel === "speed"
+      ? secondary?.driver.speedKph.value ?? 0
+      : channel === "throttle"
+      ? secondary?.driver.throttlePct.value ?? 0
+      : channel === "brake"
+      ? secondary?.driver.brakePct.value ?? 0
+      : secondary?.driver.lapDelta.value ?? 0;
+  return p - s;
 }

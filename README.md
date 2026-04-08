@@ -13,6 +13,7 @@
 - replay 3-layer recording: raw packet log + normalized event log + derived snapshot timeline
 - replay browser/list/load + scrubber + playback speed + jump-to-event + sync-to-live
 - replay archive persistence(.pitwall-replays), frame indexing, dual-stream comparison placeholder, ghost marker/sector overlay
+- sync-to-live 전환 일관성, event jump edge-case clamp, overlay marker clamp 보강
 
 ## Run
 ```bash

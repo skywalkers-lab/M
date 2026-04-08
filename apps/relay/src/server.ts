@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { compareSync, hashSync } from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
@@ -255,7 +255,9 @@ function send(ws: WebSocket, message: RelayToClientMessage): void {
 function persistReplayArchive(roomId: string): void {
   const archive = roomReplayArchive.get(roomId) ?? [];
   const filepath = path.join(replayDir, `${roomId}.json`);
-  writeFileSync(filepath, JSON.stringify(archive), "utf-8");
+  const tmp = `${filepath}.tmp`;
+  writeFileSync(tmp, JSON.stringify(archive), "utf-8");
+  renameSync(tmp, filepath);
 }
 
 function loadReplayArchive(roomId: string): Array<{ meta: ReturnType<typeof finalizeReplay>; recorder: ReplayRecorder }> {
