@@ -41,6 +41,7 @@ export function parseF125Udp(buffer: Buffer, sequence: number, debug = false): P
     sequence,
     timestamp: Date.now(),
     payload: {
+      byteLength: buffer.byteLength,
       packetId,
       sessionTime,
       speedKph: buffer.byteLength > 16 ? buffer.readUInt16LE(8) : null,

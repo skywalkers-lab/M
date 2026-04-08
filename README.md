@@ -1,9 +1,13 @@
-# F1 25 Pitwall Monorepo (Phase 1)
+# F1 25 Pitwall Monorepo
 
-Phase 1 vertical slice implemented:
-- sender (Electron): UDP 수신 + relay 업로드 + room 생성
-- relay (Node WS): room create/list/join + password/access code + snapshot fan-out
-- pitwall (React): room join 후 실시간 최소 telemetry 카드 렌더링
+## Phase 1
+- sender(Electron) -> relay(WS) -> pitwall(React) 최소 vertical slice
+
+## Phase 2 (current)
+- pitwall engineering console layout (left telemetry rail / center track / right strategy rail / bottom strips)
+- expanded derived snapshot for fuel/tyre/ERS/damage/position/diagnostics/strategy placeholders
+- relay event feed (`event.feed`) + diagnostics on join
+- role-aware action bar (viewer read-only, engineer/strategist/admin action enabled)
 
 ## Run
 ```bash
