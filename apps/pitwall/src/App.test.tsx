@@ -68,6 +68,33 @@ describe("Pitwall App", () => {
 
     expect(await screen.findByText("BOX THIS LAP")).toBeDisabled();
   });
+
+  it("shows stale/estimated quality and keeps empty sections stable", async () => {
+    vi.stubGlobal("WebSocket", MockWebSocket as any);
+    render(<App />);
+    const ws = MockWebSocket.instances.at(-1)!;
+    const stale = baseSnapshot(99);
+    stale.diagnostics.diagnosticsQuality = "stale";
+    stale.driver.speedKph.quality = "estimated";
+    stale.classification = [];
+    stale.raceControlLog = [];
+    stale.strategyLog = [];
+    ws.emit("message", { data: JSON.stringify({ type: "room.joined", roomId: "r1", role: "engineer", snapshot: stale }) });
+
+    expect(await screen.findByText("SNAPSHOT STALE")).toBeTruthy();
+    expect(await screen.findByText("estimated")).toBeTruthy();
+    expect(await screen.findByText("No race control events")).toBeTruthy();
+    expect(await screen.findByText("No strategy logs")).toBeTruthy();
+    expect(await screen.findByText("No feed events")).toBeTruthy();
+  });
+
+  it("enables actions for engineer role", async () => {
+    vi.stubGlobal("WebSocket", MockWebSocket as any);
+    render(<App />);
+    const ws = MockWebSocket.instances.at(-1)!;
+    ws.emit("message", { data: JSON.stringify({ type: "room.joined", roomId: "r1", role: "engineer", snapshot: baseSnapshot(160) }) });
+    expect(await screen.findByText("BOX THIS LAP")).toBeEnabled();
+  });
 });
 
 function baseSnapshot(speed: number) {

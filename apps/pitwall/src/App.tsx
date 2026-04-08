@@ -48,6 +48,12 @@ export function App() {
 
   const quality = snapshot?.diagnostics?.diagnosticsQuality ?? "unavailable";
   const canAct = role === "engineer" || role === "admin" || role === "strategist";
+  const raceControlFeed = events
+    .filter((event) => event.type === "racecontrol.flag" || event.type === "driver.status.warning")
+    .map((event) => (event.type === "racecontrol.flag" ? `${event.flag}: ${event.detail}` : `WARN: ${event.warning}`));
+  const strategyFeed = events
+    .filter((event) => event.type === "strategy.recommendation.updated" || event.type === "engineer.command.issued")
+    .map((event) => (event.type === "strategy.recommendation.updated" ? event.headline : `CMD ${event.command} by ${event.byRole}`));
 
   const trackMarkers = useMemo(() => {
     const p = snapshot?.position?.currentPosition?.value ?? 8;
@@ -183,8 +189,8 @@ export function App() {
 
           <div className="logs">
             <LogPanel title="Team Radio (placeholder)" items={actionLog} empty="No issued commands" />
-            <LogPanel title="Race Control" items={snapshot?.raceControlLog ?? []} empty="No race control events" />
-            <LogPanel title="Strategy Engine (placeholder)" items={snapshot?.strategyLog ?? []} empty="No strategy logs" />
+            <LogPanel title="Race Control" items={[...(snapshot?.raceControlLog ?? []), ...raceControlFeed]} empty="No race control events" />
+            <LogPanel title="Strategy Engine (placeholder)" items={[...(snapshot?.strategyLog ?? []), ...strategyFeed]} empty="No strategy logs" />
             <LogPanel title="Event Feed" items={events.map((e) => `${e.type}`)} empty="No feed events" />
           </div>
 
@@ -201,6 +207,7 @@ export function App() {
             <Chip label={`PacketRate ${snapshot?.diagnostics?.packetRate ?? "--"}/s`} tone="info" />
             <Chip label={`Jitter ${snapshot?.diagnostics?.jitterScore ?? "--"}ms`} tone="warning" />
             <Chip label={`Partial ${snapshot?.telemetryRestricted ? "YES" : "NO"}`} tone={snapshot?.telemetryRestricted ? "warning" : "success"} />
+            <Chip label={`Telemetry ${snapshot?.telemetryRestricted ? "RESTRICTED" : "FULL"}`} tone={snapshot?.telemetryRestricted ? "warning" : "success"} />
           </div>
         </section>
       </section>

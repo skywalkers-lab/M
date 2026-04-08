@@ -150,6 +150,14 @@ function handleMessage(ws: WebSocket, message: ClientToRelayMessage): void {
         });
       }
       broadcastEvent(room.roomId, buildTelemetryEvent(room.roomId, snapshot));
+      if (!prev || prev.strategy.headline !== snapshot.strategy.headline) {
+        broadcastEvent(room.roomId, {
+          type: "strategy.recommendation.updated",
+          ts: Date.now(),
+          roomId: room.roomId,
+          headline: snapshot.strategy.headline
+        });
+      }
       if (snapshot.diagnostics.stale) {
         broadcastEvent(room.roomId, {
           type: "driver.status.warning",
