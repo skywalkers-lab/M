@@ -1,0 +1,10 @@
+:root { color-scheme: dark; font-family: Inter, system-ui, sans-serif; }
+body { margin: 0; background:#090d13; color: #dce8ff; }
+.layout { display:grid; grid-template-columns: 84px 1fr; min-height:100vh; }
+.nav { writing-mode: vertical-rl; transform: rotate(180deg); border-right:1px solid #1c2534; padding:12px; letter-spacing:.12em; }
+main { padding:18px; display:grid; gap:16px; }
+.panel { border:1px solid #1b2738; background:#111a27; padding:12px; display:grid; gap:8px; }
+.panel input,.panel select,.panel button { padding:10px; background:#0d1522; color:#dce8ff; border:1px solid #2a3c57; }
+.grid { display:grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap:12px; }
+.card { border:1px solid #22324a; background:#0e1623; padding:12px; display:grid; gap:6px; }
+.card strong { font-size:28px; }

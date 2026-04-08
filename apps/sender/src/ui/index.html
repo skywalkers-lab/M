@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Pitwall Sender</title>
+    <style>
+      body { background:#0a0f18; color:#d8e7ff; font-family: Inter, Arial; margin:0; }
+      .wrap { padding:16px; display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+      .card { border:1px solid #23324a; background:#0f1726; border-radius:10px; padding:12px; }
+      input,button { width:100%; margin-top:8px; padding:8px; background:#121d31; color:#d8e7ff; border:1px solid #30496f; }
+      button { cursor:pointer; }
+      pre { max-height:220px; overflow:auto; white-space:pre-wrap; font-size:12px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h3>Connection</h3>
+        <input id="relayUrl" value="ws://localhost:7071" />
+        <input id="udpPort" value="20777" />
+        <button id="connectBtn">Connect UDP + Relay</button>
+        <div id="status"></div>
+      </div>
+      <div class="card">
+        <h3>Room</h3>
+        <input id="slug" value="driver-room" placeholder="slug" />
+        <input id="displayName" value="Driver Room" placeholder="display name" />
+        <input id="driverName" value="Driver" placeholder="driver" />
+        <input id="password" value="roompass" placeholder="room password" />
+        <input id="accessCode" value="engcode" placeholder="engineer access code" />
+        <button id="createRoomBtn">Create Room</button>
+        <button id="recordBtn">Start Recording</button>
+      </div>
+      <div class="card" style="grid-column:1/3">
+        <h3>Logs</h3>
+        <pre id="logs"></pre>
+      </div>
+    </div>
+    <script type="module" src="./renderer.js"></script>
+  </body>
+</html>
